@@ -1,0 +1,4 @@
+server:
+  port: 8000
+redirect:
+  destination: "http://localhost:7070"
