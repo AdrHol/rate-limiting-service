@@ -2,3 +2,13 @@ server:
   port: 8000
 redirect:
   destination: "http://localhost:7070"
+
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+redirect:
+  destination: "http://test:7070"
