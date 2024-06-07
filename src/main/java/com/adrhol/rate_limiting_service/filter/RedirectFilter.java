@@ -6,13 +6,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.io.IOException;
 
 public class RedirectFilter implements Filter {
 
     private String destination;
-
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
     private static final Logger logger = LoggerFactory.getLogger(RedirectFilter.class.getName());
 
     @Override
@@ -21,9 +24,15 @@ public class RedirectFilter implements Filter {
     }
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
+        redisTemplate.opsForHash();
+//        This implementation works fine at this point, but in the future additional layer like API Gateway will
+//        cause IP to be almost constant. So final implementation will take a look at header ip value
+
+        String ip = request.getRemoteAddr();
+
         String query = request.getQueryString();
         String newUrl = destination + request.getRequestURI() + (query == null ? "" : query);
         logger.info("Redirected to: " + newUrl);
