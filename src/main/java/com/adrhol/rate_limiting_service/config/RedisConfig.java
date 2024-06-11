@@ -1,11 +1,16 @@
 package com.adrhol.rate_limiting_service.config;
 
 
-import com.adrhol.rate_limiting_service.dto.RateBucketDTO;
+import com.adrhol.rate_limiting_service.RateBucketDeserializer;
+import com.adrhol.rate_limiting_service.model.RateBucketDTO;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -18,17 +23,27 @@ public class RedisConfig {
     public RedisConnectionFactory redisConnectionFactory(){
         return new LettuceConnectionFactory();
     }
-
     @Bean
-    public RedisTemplate<String, RateBucketDTO> redisTemplate(RedisConnectionFactory redisConnectionFactory){
-        RedisTemplate<String, RateBucketDTO> redisTemplate = new RedisTemplate<>();
+    public ObjectMapper objectMapper(){
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return objectMapper;
+    }
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory,
+                                                              ObjectMapper objectMapper){
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        var genericJackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setKeySerializer(stringRedisSerializer);
+        redisTemplate.setHashKeySerializer(stringRedisSerializer);
 
-        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setValueSerializer(stringRedisSerializer);
+        redisTemplate.setHashValueSerializer(stringRedisSerializer);
+
         return redisTemplate;
     }
 }

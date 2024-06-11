@@ -1,7 +1,9 @@
 package com.adrhol.rate_limiting_service.service;
 
-import com.adrhol.rate_limiting_service.dto.RateBucketDTO;
+import com.adrhol.rate_limiting_service.model.RateBucketDTO;
 import com.adrhol.rate_limiting_service.exceptions.RateLimitExceededException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,20 +11,27 @@ import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 @Service
 public class RatesBucketService {
 
     @Value("${spring.redis.hashBucket}")
     private String HASH_NAME;
-    @Value("${spring.redis.request-limit}")
+    @Value("${redirect.bucket.request-limit}")
     private int RATES_LIMIT;
-    private RedisTemplate<String, RateBucketDTO> redisTemplate;
-    private HashOperations<String, String, RateBucketDTO> hashOperations;
+    @Value("${redirect.bucket.duration}")
+    private int SECONDS;
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
+    private HashOperations<String, String, String> hashOperations;
 
 
 
     @Autowired
-    public RatesBucketService (RedisTemplate<String, RateBucketDTO> redisTemplate){
+    public RatesBucketService (RedisTemplate<String, String> redisTemplate){
         this.redisTemplate = redisTemplate;
     }
 
@@ -30,18 +39,23 @@ public class RatesBucketService {
     public void init(){
         this.hashOperations = redisTemplate.opsForHash();
     }
-    public boolean validateRequestBucket(String ip){
-        RateBucketDTO retrievedBucket = hashOperations.get(HASH_NAME, ip);
-        return retrievedBucket == null ? insertNewBucketToHash(ip) : decrementBucket(retrievedBucket);
+    public boolean validateRequestBucket(String ip) throws JsonProcessingException {
+        String receivedJson = hashOperations.get(HASH_NAME, ip);
+        RateBucketDTO retrievedBucket = objectMapper.readValue(receivedJson, RateBucketDTO.class);
+        return tokenToBeCreated(retrievedBucket) ? insertNewBucketToHash(ip) : decrementBucket(retrievedBucket);
     }
-    private boolean insertNewBucketToHash(String ip){
-        RateBucketDTO bucketDTO = new RateBucketDTO(ip, RATES_LIMIT);
-        hashOperations.put(HASH_NAME, ip, bucketDTO);
+    private boolean tokenToBeCreated(RateBucketDTO rateBucket){
+        return rateBucket == null || rateBucket.getDuration().isBefore(LocalDateTime.now());
+    }
+    private boolean insertNewBucketToHash(String ip) throws JsonProcessingException {
+        LocalDateTime duration = LocalDateTime.now().plus(Duration.ofSeconds(SECONDS));
+        RateBucketDTO bucketDTO = new RateBucketDTO(ip, RATES_LIMIT, duration);
+        hashOperations.put(HASH_NAME, ip, bucketDTO.toJson());
         return true;
     }
-    private boolean decrementBucket(RateBucketDTO retrievedBucket) throws RateLimitExceededException {
+    private boolean decrementBucket(RateBucketDTO retrievedBucket) throws RateLimitExceededException, JsonProcessingException {
         retrievedBucket.decrement();
-        hashOperations.put(HASH_NAME, retrievedBucket.getIp() , retrievedBucket);
+        hashOperations.put(HASH_NAME, retrievedBucket.getIp() , retrievedBucket.toJson());
         return true;
     }
 }
