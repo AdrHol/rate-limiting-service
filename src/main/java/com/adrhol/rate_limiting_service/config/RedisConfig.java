@@ -1,19 +1,16 @@
 package com.adrhol.rate_limiting_service.config;
 
 
-import com.adrhol.rate_limiting_service.RateBucketDeserializer;
 import com.adrhol.rate_limiting_service.model.RateBucketDTO;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -31,18 +28,19 @@ public class RedisConfig {
         return objectMapper;
     }
     @Bean
-    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory,
+    public RedisTemplate<String, RateBucketDTO> redisTemplate(RedisConnectionFactory redisConnectionFactory,
                                                               ObjectMapper objectMapper){
-        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        RedisTemplate<String, RateBucketDTO> redisTemplate = new RedisTemplate<>();
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-        var genericJackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer();
+        var jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<RateBucketDTO>( objectMapper, RateBucketDTO.class);
+
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
         redisTemplate.setKeySerializer(stringRedisSerializer);
         redisTemplate.setHashKeySerializer(stringRedisSerializer);
 
-        redisTemplate.setValueSerializer(stringRedisSerializer);
-        redisTemplate.setHashValueSerializer(stringRedisSerializer);
+        redisTemplate.setValueSerializer(jackson2JsonRedisSerializer);
+        redisTemplate.setHashValueSerializer(jackson2JsonRedisSerializer);
 
         return redisTemplate;
     }

@@ -23,15 +23,15 @@ public class RatesBucketService {
     private int RATES_LIMIT;
     @Value("${redirect.bucket.duration}")
     private int SECONDS;
-    private RedisTemplate<String, String> redisTemplate;
+    private RedisTemplate<String, RateBucketDTO> redisTemplate;
     @Autowired
     private ObjectMapper objectMapper;
-    private HashOperations<String, String, String> hashOperations;
+    private HashOperations<String, String, RateBucketDTO> hashOperations;
 
 
 
     @Autowired
-    public RatesBucketService (RedisTemplate<String, String> redisTemplate){
+    public RatesBucketService (RedisTemplate<String, RateBucketDTO> redisTemplate){
         this.redisTemplate = redisTemplate;
     }
 
@@ -40,9 +40,8 @@ public class RatesBucketService {
         this.hashOperations = redisTemplate.opsForHash();
     }
     public boolean validateRequestBucket(String ip) throws JsonProcessingException {
-        String receivedJson = hashOperations.get(HASH_NAME, ip);
-        RateBucketDTO retrievedBucket = objectMapper.readValue(receivedJson, RateBucketDTO.class);
-        return tokenToBeCreated(retrievedBucket) ? insertNewBucketToHash(ip) : decrementBucket(retrievedBucket);
+        RateBucketDTO receivedBucket = hashOperations.get(HASH_NAME, ip);
+        return tokenToBeCreated(receivedBucket) ? insertNewBucketToHash(ip) : decrementBucket(receivedBucket);
     }
     private boolean tokenToBeCreated(RateBucketDTO rateBucket){
         return rateBucket == null || rateBucket.getDuration().isBefore(LocalDateTime.now());
@@ -50,12 +49,12 @@ public class RatesBucketService {
     private boolean insertNewBucketToHash(String ip) throws JsonProcessingException {
         LocalDateTime duration = LocalDateTime.now().plus(Duration.ofSeconds(SECONDS));
         RateBucketDTO bucketDTO = new RateBucketDTO(ip, RATES_LIMIT, duration);
-        hashOperations.put(HASH_NAME, ip, bucketDTO.toJson());
+        hashOperations.put(HASH_NAME, ip, bucketDTO);
         return true;
     }
     private boolean decrementBucket(RateBucketDTO retrievedBucket) throws RateLimitExceededException, JsonProcessingException {
         retrievedBucket.decrement();
-        hashOperations.put(HASH_NAME, retrievedBucket.getIp() , retrievedBucket.toJson());
+        hashOperations.put(HASH_NAME, retrievedBucket.getIp() , retrievedBucket);
         return true;
     }
 }
