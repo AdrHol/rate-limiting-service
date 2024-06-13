@@ -8,14 +8,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-
+@Component
 public class RedirectFilter implements Filter {
-
+    @Value("${redirect.destination}")
     private String destination;
+
+    private final RatesBucketService ratesBucketService;
     @Autowired
-    private RatesBucketService ratesBucketService;
+    public RedirectFilter (RatesBucketService ratesBucketService){
+        this.ratesBucketService = ratesBucketService;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(RedirectFilter.class.getName());
 
@@ -34,24 +40,17 @@ public class RedirectFilter implements Filter {
 
         String ip = request.getRemoteAddr();
 
-        String google = "http://google.pl";
-        String interia = "http://interia.pl";
-
         if(ratesBucketService.validateRequestBucket(ip)){
-            response.sendRedirect(google);
+            String query = request.getQueryString();
+            String newUrl = destination + request.getRequestURI() + (query == null ? "" : query);
+            logger.info("Redirected to: " + newUrl);
+            response.sendRedirect(newUrl);
         }
 
-        String query = request.getQueryString();
-        String newUrl = destination + request.getRequestURI() + (query == null ? "" : query);
-        logger.info("Redirected to: " + newUrl);
     }
 
     @Override
     public void destroy() {
         Filter.super.destroy();
-    }
-
-    public void setDestination(String destination){
-        this.destination = destination;
     }
 }

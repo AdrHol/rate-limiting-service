@@ -9,8 +9,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class FilterConfig {
-    @Value("${redirect.destination}")
-    private String destination;
 
     @Bean
     public FilterRegistrationBean<RedirectFilter> filterRegistration(RedirectFilter filter){
@@ -18,11 +16,5 @@ public class FilterConfig {
         registrationBean.setFilter(filter);
         registrationBean.addUrlPatterns("/*");
         return registrationBean;
-    }
-    @Bean
-    public RedirectFilter filter(){
-        RedirectFilter filter = new RedirectFilter();
-        filter.setDestination(destination);
-        return filter;
     }
 }

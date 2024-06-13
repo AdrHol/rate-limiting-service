@@ -3,7 +3,6 @@ package com.adrhol.rate_limiting_service.service;
 import com.adrhol.rate_limiting_service.model.RateBucketDTO;
 import com.adrhol.rate_limiting_service.exceptions.RateLimitExceededException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,8 +23,6 @@ public class RatesBucketService {
     @Value("${redirect.bucket.duration}")
     private int SECONDS;
     private RedisTemplate<String, RateBucketDTO> redisTemplate;
-    @Autowired
-    private ObjectMapper objectMapper;
     private HashOperations<String, String, RateBucketDTO> hashOperations;
 
 
