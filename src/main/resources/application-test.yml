@@ -1,0 +1,13 @@
+server:
+  port: 8000
+redirect:
+  destination: "http://test:7070"
+  bucket:
+    request-limit: 5
+    duration: 30
+
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    hashBucket: "rates"

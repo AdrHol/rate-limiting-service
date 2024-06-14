@@ -32,11 +32,14 @@ public class RatesBucketService {
         this.redisTemplate = redisTemplate;
     }
 
-    @PostConstruct
-    public void init(){
-        this.hashOperations = redisTemplate.opsForHash();
-    }
+//    @PostConstruct
+//    public void init(){
+//        this.hashOperations = redisTemplate.opsForHash();
+//    }
+
     public boolean validateRequestBucket(String ip) throws JsonProcessingException {
+        //TODO temporary solution for tests validity
+        this.hashOperations = redisTemplate.opsForHash();
         RateBucketDTO receivedBucket = hashOperations.get(HASH_NAME, ip);
         return tokenToBeCreated(receivedBucket) ? insertNewBucketToHash(ip) : decrementBucket(receivedBucket);
     }
