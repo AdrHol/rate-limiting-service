@@ -1,22 +1,22 @@
-server:
-  port: 8000
-redirect:
-  destination: "http://localhost:7070"
-  bucket:
-    request-limit: 5
-    duration: 30
-
+app:
+  messages:
+    ipNotFound: "IP address not found"
 spring:
-  redis:
-    host: localhost
-    port: 6379
-    hashBucket: "rates"
+  cloud:
+    gateway:
+      default-filters:
+        - name: LoggingFilter
+      routes:
+        - id: user-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/profiles/**
+          filters:
+            - StripPrefix=1
+        - id: product-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/profiles/**
+          filters:
+            - StripPrefix=1
 
-
----
-spring:
-  config:
-    activate:
-      on-profile: test
-redirect:
-  destination: "http://test:7070"
